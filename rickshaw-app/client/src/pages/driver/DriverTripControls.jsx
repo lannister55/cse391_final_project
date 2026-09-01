@@ -156,8 +156,15 @@ const DriverTripControls = () => {
           }
         }
         
-        // Lock final point strictly to Destination D
-        points.push({ lat: dLat, lng: dLng });
+        // Ensure the very last point is EXACTLY destination D (replace last if close, otherwise push)
+        const last = points[points.length - 1];
+        const distToD = Math.hypot(last.lat - dLat, last.lng - dLng);
+        if (distToD > 0.00005) {
+          points.push({ lat: dLat, lng: dLng });
+        } else {
+          // snap the last existing point exactly to D
+          points[points.length - 1] = { lat: dLat, lng: dLng };
+        }
 
         let step = 0;
         const totalSteps = points.length;

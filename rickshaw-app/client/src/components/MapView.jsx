@@ -110,10 +110,12 @@ const MapView = ({ pickup, destination, driverLocation, status, center, zoom = 1
           attribution="&copy; Google Maps"
         />
         
-        {/* Auto-follow driver when active; otherwise centre on pickup */}
+        {/* Auto-follow driver when active; on completion centre on destination */}
         <MapUpdater
           center={
-            driverLocation && !isCompleted
+            isCompleted && destination
+              ? [destination.lat, destination.lng]
+              : driverLocation
               ? [driverLocation.lat, driverLocation.lng]
               : defaultCenter
           }
@@ -149,6 +151,17 @@ const MapView = ({ pickup, destination, driverLocation, status, center, zoom = 1
             <Popup>
               <div className="text-sm font-semibold">
                 🚖 Driver Location
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* On completion show taxi parked at destination */}
+        {isCompleted && destination && (
+          <Marker position={[destination.lat, destination.lng]} icon={driverIcon}>
+            <Popup>
+              <div className="text-sm font-bold text-emerald-700">
+                🏁 Arrived at Destination!
               </div>
             </Popup>
           </Marker>

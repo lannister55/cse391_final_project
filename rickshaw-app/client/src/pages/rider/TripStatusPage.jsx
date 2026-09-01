@@ -35,8 +35,11 @@ const TripStatusPage = () => {
           const ratingResponse = await api.get(`/ratings/trip/${id}`);
           setHasRated(true);
         } catch (ratingErr) {
-          // Rating doesn't exist yet
-          setHasRated(false);
+          // Only 404 means "not yet rated"; anything else is a real error
+          if (ratingErr.response?.status === 404) {
+            setHasRated(false);
+          }
+          // For other errors we silently default to false so the form still shows
         }
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load trip status.');
@@ -53,7 +56,7 @@ const TripStatusPage = () => {
 
     socket.emit('join-trip-room', id);
 
-    socket.on('trip-status-updated', ({ status, driverId }) => {
+    socket.on('trip-status-updated', ({ status }) => {
       setTrip((prev) => ({ ...prev, status }));
     });
 
@@ -72,6 +75,27 @@ const TripStatusPage = () => {
       socket.off('driver-location-update');
     };
   }, [id, socketRef]);
+
+  // ── Polling fallback: re-fetch trip every 5s while active ────────────────
+  // Ensures COMPLETED status reaches the rider even if the socket event is missed
+  useEffect(() => {
+    const ACTIVE_STATUSES = ['ACCEPTED', 'DRIVER_ARRIVING', 'ONGOING'];
+    if (!trip || !ACTIVE_STATUSES.includes(trip.status)) return;
+
+    const pollId = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/trips/status/${id}`);
+        const newStatus = data.trip.status;
+        if (newStatus !== trip.status) {
+          setTrip((prev) => ({ ...prev, status: newStatus }));
+        }
+      } catch {
+        // silently ignore poll errors
+      }
+    }, 5000);
+
+    return () => clearInterval(pollId);
+  }, [trip?.status, id]);
 
   const handleCancelTrip = async () => {
     if (!confirm('Are you sure you want to cancel this trip?')) return;

@@ -25,7 +25,9 @@ export const createRating = async (req, res) => {
       return res.status(404).json({ message: 'Trip not found.' });
     }
 
-    if (String(trip.riderId) !== String(req.user.id)) {
+    // riderId may be a raw ObjectId or a populated object — extract safely
+    const tripRiderId = String(trip.riderId?._id || trip.riderId);
+    if (tripRiderId !== String(req.user._id)) {
       return res.status(403).json({ message: 'You can only rate your own trips.' });
     }
 
