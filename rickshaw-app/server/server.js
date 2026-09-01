@@ -1,5 +1,6 @@
 import express from 'express';
 import http from 'http';
+import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -16,22 +17,13 @@ import adminRoutes from './routes/adminRoutes.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
-
 const app = express();
 const httpServer = http.createServer(app);
 
 // Socket.io setup
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
-  'http://localhost:5173',
-  'http://localhost:5174',
-];
-
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: true,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -44,8 +36,18 @@ initSocket(io);
 setIO(io);
 
 // Middleware
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+
+// Reuse the database connection in serverless instances before serving a request.
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Health check route
 app.get('/', (req, res) => {
@@ -66,7 +68,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong', error: err.message });
 });
 
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Vercel imports this server as a function. Only listen when this file is run locally.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const PORT = process.env.PORT || 5000;
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+export default httpServer;

@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Change this one value when the backend is deployed.
+export const API_URL = 'https://rideshare-green.vercel.app';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_URL}/api`,
   headers: { 'Content-Type': 'application/json' },
 });
 

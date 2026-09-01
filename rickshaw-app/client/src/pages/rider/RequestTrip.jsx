@@ -34,6 +34,17 @@ const RequestTrip = () => {
   const pickupDebounceRef = useRef(null);
   const destDebounceRef   = useRef(null);
 
+  const fetchWithTimeout = async (url, options = {}) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
   // ── Option 2: Reverse Geocoding for Map Clicks ──────────────────────────────
   const reverseGeocode = async (lat, lng) => {
     setGeocoding(true);
@@ -42,7 +53,7 @@ const RequestTrip = () => {
 
     try {
       // 1. Primary: Nominatim with detailed address structure
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
         { headers: { 'Accept-Language': 'en' } }
       );
@@ -64,8 +75,10 @@ const RequestTrip = () => {
           const uniqueComponents = [...new Set(cleanComponents)];
 
           if (uniqueComponents.length >= 2) {
+            setGeocoding(false);
             return uniqueComponents.join(', ');
           } else if (uniqueComponents.length === 1) {
+            setGeocoding(false);
             return `${uniqueComponents[0]} ${coordSuffix}`;
           }
 
@@ -76,6 +89,7 @@ const RequestTrip = () => {
               .map(p => p.trim())
               .filter(p => !genericTerms.includes(p.toLowerCase()));
             if (cleanParts.length > 0) {
+              setGeocoding(false);
               return `${cleanParts.slice(0, 2).join(', ')} ${coordSuffix}`;
             }
           }
@@ -87,7 +101,7 @@ const RequestTrip = () => {
 
     try {
       // 2. Fallback: BigDataCloud Reverse Geocoding API
-      const res2 = await fetch(
+      const res2 = await fetchWithTimeout(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
       );
       if (res2.ok) {
@@ -112,29 +126,34 @@ const RequestTrip = () => {
   };
 
   // Handle map click
-  const handleMapClick = async ({ lat, lng }) => {
+  const handleMapClick = ({ lat, lng }) => {
     setError('');
+    const selectedLocation = activeSelection;
+    const coordSuffix = `[${lat.toFixed(3)}, ${lng.toFixed(3)}]`;
+    const point = { name: `Point ${coordSuffix}`, lat, lng };
 
-    // Set immediate loading feedback in the target search bar
-    if (activeSelection === 'pickup') {
-      setPickupInput('📍 Fetching location address...');
-    } else {
-      setDestInput('🎯 Fetching location address...');
-    }
-
-    const placeName = await reverseGeocode(lat, lng);
-    const point = { name: placeName, lat, lng };
-
-    if (activeSelection === 'pickup') {
+    // Show the pin immediately; address lookup must not block map interaction.
+    if (selectedLocation === 'pickup') {
       setPickup(point);
-      setPickupInput(placeName);
+      setPickupInput('📍 Fetching location address...');
       setActiveSelection('destination');
     } else {
       setDestination(point);
-      setDestInput(placeName);
+      setDestInput('🎯 Fetching location address...');
     }
+
     setMapCenter([lat, lng]);
     setFareResult(null);
+
+    void reverseGeocode(lat, lng).then((placeName) => {
+      if (selectedLocation === 'pickup') {
+        setPickup((current) => current.lat === lat && current.lng === lng ? { ...current, name: placeName } : current);
+        setPickupInput(placeName);
+      } else {
+        setDestination((current) => current.lat === lat && current.lng === lng ? { ...current, name: placeName } : current);
+        setDestInput(placeName);
+      }
+    });
   };
 
   // ── Option 1: Forward Geocoding Search (Type Location) ──────────────────────

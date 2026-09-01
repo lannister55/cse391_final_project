@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { API_URL } from '../services/api';
 
 /**
  * useSocket — returns a stable ref to a Socket.io client instance.
@@ -11,12 +12,7 @@ const useSocket = () => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // Connect to the backend server
-    // In development, this connects to localhost:5000
-    // In production, this connects to the same origin as the API
-    const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    
-    socketRef.current = io(serverUrl, {
+    socketRef.current = io(API_URL, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnection: true,

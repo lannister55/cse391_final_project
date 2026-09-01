@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build output and local tooling caches
+dist/
+coverage/
+
+# Vercel project metadata
+.vercel/
+
+# Logs and system files
+*.log
+.DS_Store
