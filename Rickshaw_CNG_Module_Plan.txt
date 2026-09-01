@@ -1,0 +1,489 @@
+RICKSHAW/CNG FARE NEGOTIATION APP - MODULE PLAN
+====================================================
+
+FINAL TECH STACK (CONFIRMED)
+-----------------------------
+Frontend  : React.js + Tailwind CSS + Leaflet.js
+Backend   : Node.js + Express.js + Socket.io
+Database  : MongoDB Atlas (Mongoose)
+Auth      : JWT
+Maps      : Leaflet.js + OpenStreetMap + Nominatim
+Deployment: Vercel (frontend) + Render (backend) + MongoDB Atlas
+
+
+EXECUTION PATTERN (FOLLOWED FOR EVERY MODULE)
+----------------------------------------------
+Step 1 - Mongoose Model    (database schema)
+Step 2 - Backend API       (routes + controllers)
+Step 3 - Test API          (manual/postman check)
+Step 4 - React UI          (pages + components)
+Step 5 - Connect frontend  (axios calls to backend)
+Step 6 - Verify end to end (full flow working)
+
+
+MODULE PRIORITY
+---------------
+Module 1  - Must (foundation)
+Module 2  - Must (security)
+Module 3  - Must (core rider feature)
+Module 4  - Must (core driver feature)
+Module 5  - Must (main innovation)
+Module 6  - Must (completes MVP loop)
+Module 7  - Important (visual impression)
+Module 8  - Important (completes user journey)
+Module 9  - Nice to have
+Module 10 - Nice to have
+Module 11 - Required before submission
+
+Modules 1 to 6 = MVP. Submitting just these is already
+a complete and impressive course project.
+
+
+====================================================
+MODULE 1 - PROJECT SETUP
+====================================================
+
+Goal:
+Get a working skeleton running on localhost.
+
+What to build:
+- Folder structure (client + server)
+- package.json for both client and server
+- MongoDB Atlas connection
+- Basic Express server running
+- React app with React Router setup
+- .env configuration
+- Tailwind CSS setup
+- CORS setup
+
+Folder Structure:
+
+rickshaw-app/
+|
+|-- client/
+|   |-- src/
+|   |   |-- pages/
+|   |   |-- components/
+|   |   |-- context/
+|   |   |-- hooks/
+|   |   |-- services/
+|   |   `-- App.jsx
+|   |-- index.html
+|   `-- package.json
+|
+|-- server/
+|   |-- config/
+|   |   `-- db.js
+|   |-- models/
+|   |-- routes/
+|   |-- controllers/
+|   |-- middleware/
+|   |-- socket/
+|   |-- server.js
+|   `-- package.json
+|
+|-- .env
+|-- .env.example
+`-- README.md
+
+Environment Variables (.env):
+- PORT
+- MONGO_URI
+- JWT_SECRET
+- CLIENT_URL
+
+Done when:
+- Express server runs on localhost:5000
+- MongoDB Atlas connects successfully
+- React app runs on localhost:5173
+- No errors in console
+
+
+====================================================
+MODULE 2 - AUTHENTICATION
+====================================================
+
+Goal:
+Users can register, login, and be identified by role.
+
+Roles: RIDER / DRIVER / ADMIN
+
+MongoDB Collection - users:
+- name         (String)
+- email        (String, unique)
+- phone        (String)
+- passwordHash (String)
+- role         (Enum: RIDER, DRIVER, ADMIN)
+- isBlocked    (Boolean, default false)
+- createdAt    (Date)
+
+Backend:
+- POST /api/auth/register
+- POST /api/auth/login
+- GET  /api/auth/me
+- middleware/auth.js    (verify JWT token)
+- middleware/role.js    (check role access)
+
+Frontend Pages:
+- /register    (Register page with role selection)
+- /login       (Login page)
+- Auth context (store token + user in React context)
+- Protected Route component
+
+Role Redirects after login:
+- RIDER  -> /rider/dashboard
+- DRIVER -> /driver/dashboard
+- ADMIN  -> /admin/dashboard
+
+Done when:
+- Rider and Driver can register and login
+- JWT token is returned on login
+- Protected pages redirect unauthenticated users
+- Role-based dashboard redirect works
+
+
+====================================================
+MODULE 3 - RIDER TRIP & FARE ESTIMATION
+====================================================
+
+Goal:
+Rider can post a trip request and see an estimated fare.
+
+MongoDB Collection - tripRequests:
+- riderId         (ObjectId ref users)
+- pickup          ({ name, lat, lng })
+- destination     ({ name, lat, lng })
+- requestedTime   (Date)
+- distanceKM      (Number)
+- estimatedFare   (Number)
+- status          (Enum: PENDING, MATCHED, NEGOTIATING,
+                   ACCEPTED, ONGOING, COMPLETED, CANCELLED)
+- createdAt       (Date)
+
+Initial status: PENDING
+
+Backend:
+- POST /api/fare/estimate
+  Input : pickup (lat,lng), destination (lat,lng)
+  Output: distanceKM, durationMin, estimatedFare
+- POST /api/trips
+- GET  /api/trips/my
+
+Fare Formula:
+  distanceKM    = Haversine(pickup, destination)
+  estimatedFare = 30 + (distanceKM x 15)
+  Base fare     = 30 BDT
+  Per KM rate   = 15 BDT
+
+Frontend Pages:
+- /rider/dashboard      (shows their trips)
+- /rider/request-trip   (form for pickup + destination)
+
+Frontend Components:
+- TripRequestForm
+- FareDisplay
+- TripCard
+
+Done when:
+- System calculates and shows estimated fare
+- Trip saved to MongoDB with PENDING status
+- Rider can see their trip list
+
+
+====================================================
+MODULE 4 - DRIVER DASHBOARD
+====================================================
+
+Goal:
+Driver can see all available PENDING trips.
+
+Backend:
+- GET /api/trips        (PENDING trips, DRIVER only)
+- GET /api/trips/:id    (single trip details)
+
+Frontend Pages:
+- /driver/dashboard
+- /driver/trip/:id
+
+Frontend Components:
+- AvailableTripList
+- TripDetailCard
+- OfferButton
+
+Driver sees: pickup, destination, fare, distance, time
+
+Done when:
+- Driver sees available trips on login
+- Driver can view full trip details
+- Make Offer button is visible
+
+
+====================================================
+MODULE 5 - FARE NEGOTIATION ENGINE
+====================================================
+
+Goal:
+Driver makes offer. Rider counters or accepts.
+Real time via Socket.io. Core innovation of the project.
+
+MongoDB Collection - driverOffers:
+- tripId      (ObjectId ref tripRequests)
+- driverId    (ObjectId ref users)
+- amount      (Number)
+- message     (String, optional)
+- status      (Enum: PENDING, COUNTERED, ACCEPTED,
+               REJECTED, EXPIRED)
+- createdAt   (Date)
+
+Backend APIs:
+- POST /api/offers
+- GET  /api/offers/:tripId
+- POST /api/offers/:offerId/counter
+- PUT  /api/offers/:offerId/accept
+- PUT  /api/offers/:offerId/reject
+
+Socket.io Events:
+  join-trip-room    -> joins room by tripId
+  new-offer         -> offer-received    (to rider)
+  counter-offer     -> counter-received  (to driver)
+  accept-offer      -> offer-accepted    (both)
+  reject-offer      -> offer-rejected    (to driver)
+
+Negotiation Example:
+  Estimated fare : 120 BDT
+  Driver offer   : 150 BDT -> PENDING
+  Rider counter  : 130 BDT -> COUNTERED
+  Driver counter : 140 BDT -> COUNTERED
+  Rider accepts  : 140 BDT -> ACCEPTED
+
+Frontend Components:
+- OfferForm
+- NegotiationThread
+- CounterOfferForm
+- AcceptRejectButtons
+
+Done when:
+- Driver submits offer
+- Rider sees it instantly (no page refresh)
+- Rider can counter or accept
+- Driver sees counter instantly
+- Accepted offer triggers trip confirmation
+
+
+====================================================
+MODULE 6 - TRIP STATUS FLOW
+====================================================
+
+Goal:
+Trip moves through stages after offer is accepted.
+
+MongoDB Collection - trips:
+- tripRequestId   (ObjectId ref tripRequests)
+- riderId         (ObjectId ref users)
+- driverId        (ObjectId ref users)
+- agreedFare      (Number)
+- actualFare      (Number)
+- status          (Enum)
+- startTime       (Date)
+- endTime         (Date)
+- createdAt       (Date)
+
+Status Flow:
+  PENDING -> MATCHED -> NEGOTIATING -> ACCEPTED
+  -> DRIVER_ARRIVING -> ONGOING -> COMPLETED
+
+Who updates what:
+  DRIVER -> DRIVER_ARRIVING, ONGOING, COMPLETED
+  RIDER  -> CANCELLED (before ONGOING only)
+
+Backend:
+- PUT /api/trips/:id/status
+
+Frontend Components:
+- TripStatusBar
+- DriverTripControls  (Start Trip / End Trip buttons)
+- RiderTripView
+
+Done when:
+- Rider accepts -> trip document created
+- Driver marks trip started and completed
+- Rider sees status update in real time
+
+
+====================================================
+MODULE 7 - MAP & ROUTE VISUALIZATION
+====================================================
+
+Goal:
+Show map with pickup, destination, and route.
+
+Libraries:
+- react-leaflet + leaflet
+- Nominatim (free address search, no API key needed)
+- OSRM (free routing, no API key needed)
+
+Nominatim:
+https://nominatim.openstreetmap.org/search?q=Mirpur+Dhaka&format=json
+
+OSRM:
+http://router.project-osrm.org/route/v1/driving/lng1,lat1;lng2,lat2
+
+Frontend Components:
+- MapView
+- PickupMarker (green)
+- DestinationMarker (red)
+- RoutePolyline (blue line)
+- AddressSearchInput
+
+Done when:
+- Address search gives suggestions
+- Markers appear on map
+- Route is drawn between points
+- Distance matches fare calculation
+
+
+====================================================
+MODULE 8 - RATING & REVIEW
+====================================================
+
+Goal:
+Rider rates the driver after trip completion.
+
+MongoDB Collection - ratings:
+- tripId      (ObjectId ref trips)
+- riderId     (ObjectId ref users)
+- driverId    (ObjectId ref users)
+- rating      (Number, 1 to 5)
+- review      (String, optional)
+- createdAt   (Date)
+
+Backend:
+- POST /api/ratings
+- GET  /api/ratings/driver/:driverId
+
+Frontend Components:
+- StarRating
+- ReviewForm
+- DriverRatingBadge
+
+Done when:
+- Rating form shows after trip completes
+- Rating saved to MongoDB
+- Average rating visible on driver cards
+- Duplicate rating blocked
+
+
+====================================================
+MODULE 9 - LIVE DRIVER TRACKING
+====================================================
+
+Goal:
+Rider sees driver moving on the map in real time.
+
+MongoDB Collection - locations:
+- driverId    (ObjectId ref users)
+- lat         (Number)
+- lng         (Number)
+- updatedAt   (Date)
+
+Flow:
+  Driver GPS -> emit every 3 sec -> Socket.io Server
+  -> broadcast -> Rider map marker moves
+
+Socket Events:
+  Driver emits : update-location { lat, lng, tripId }
+  Rider gets   : driver-location-update { lat, lng }
+
+Done when:
+- Driver marker moves every 3 seconds on rider map
+- Tracking stops when trip COMPLETED
+
+
+====================================================
+MODULE 10 - ADMIN DASHBOARD
+====================================================
+
+Goal:
+Admin monitors and manages the whole system.
+
+Backend APIs:
+- GET /api/admin/dashboard
+- GET /api/admin/users
+- GET /api/admin/trips
+- PUT /api/admin/users/:id/block
+- PUT /api/admin/drivers/:id/verify
+
+Stats shown:
+- Total Users / Riders / Drivers
+- Total / Completed / Cancelled Trips
+- Average Rating
+
+Frontend Pages:
+- /admin/dashboard
+- /admin/users
+- /admin/trips
+
+Done when:
+- Admin sees correct stats
+- Can block/unblock users
+- Can verify drivers
+- Can view all trips
+
+
+====================================================
+MODULE 11 - TESTING & DEPLOYMENT
+====================================================
+
+Goal:
+App works correctly and is live on the internet.
+
+Testing:
+- Auth : register, login, wrong password, protected routes
+- Trip : create, cancel, complete
+- Nego : offer, counter, accept, reject (real time)
+- Map  : markers, route, address search
+- Rate : submit, duplicate blocked, avg correct
+- Admin: role protection, block, stats
+
+Deployment:
+  1. MongoDB Atlas  -> create cluster, get connection string
+  2. Render         -> deploy server/ as Web Service
+  3. Vercel         -> deploy client/ as frontend
+
+Checklist before deploy:
+- CORS set to production URL
+- All secrets in .env variables
+- No hardcoded URLs in code
+- Error handling on all routes
+
+Done when:
+- Live URL works end to end
+- Full negotiation flow works on live site
+- No crashes during demo
+
+
+====================================================
+MODULE SUMMARY TABLE
+====================================================
+
+Module   Name                    Priority    Effort
+-------  ----------------------  ----------  ------
+1        Project Setup           Must        Low
+2        Authentication          Must        Medium
+3        Rider Trip & Fare       Must        Medium
+4        Driver Dashboard        Must        Low
+5        Fare Negotiation        Must        High
+6        Trip Status Flow        Must        Medium
+7        Map & Route             Important   Medium
+8        Rating & Review         Important   Low
+9        Live Tracking           Nice        High
+10       Admin Dashboard         Nice        Medium
+11       Testing & Deployment    Required    Medium
+
+MVP = Modules 1 to 6
+V2  = Modules 7 and 8
+V3  = Modules 9, 10, and 11
+
+====================================================
+END OF MODULE PLAN
+====================================================

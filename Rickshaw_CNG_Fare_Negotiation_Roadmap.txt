@@ -1,0 +1,761 @@
+RICKSHAW/CNG FARE NEGOTIATION & ROUTE-SHARING APP
+====================================================
+
+TECHNOLOGY STACK
+----------------
+Frontend:
+- React.js
+- HTML/CSS
+- Tailwind CSS or Bootstrap
+- Leaflet.js for maps
+
+Backend:
+- Node.js
+- Express.js
+- Socket.io for real-time communication
+- JWT for authentication
+
+Database:
+- MongoDB
+- MongoDB Atlas
+
+Map/Route:
+- OpenStreetMap
+- Leaflet.js
+- Routing service such as OSRM
+
+Deployment:
+- Vercel for React frontend
+- Render/Railway for backend
+- MongoDB Atlas for database
+
+
+PROJECT GOAL
+------------
+Build an application where:
+1. A rider posts a trip request.
+2. The system estimates the fare.
+3. The system finds drivers whose routes overlap with the rider's route.
+4. Drivers can make fare offers.
+5. Riders and drivers negotiate the fare.
+6. The rider accepts an offer.
+7. The trip is tracked.
+8. The rider submits the actual fare and rating.
+9. Admin manages the whole system.
+
+
+DEVELOPMENT ROADMAP
+===================
+
+PHASE 1 - REQUIREMENTS & DESIGN
+-------------------------------
+Tasks:
+- Finalize project requirements.
+- Identify Rider, Driver and Admin roles.
+- Draw Use Case Diagram.
+- Draw ER Diagram.
+- Design basic UI/wireframes.
+- Decide database collections.
+- Define API endpoints.
+
+Main output:
+- Project proposal
+- Use Case Diagram
+- ER Diagram
+- UI design
+- API plan
+
+
+PHASE 2 - PROJECT SETUP
+-----------------------
+Set up:
+
+Frontend:
+- React application
+
+Backend:
+- Node.js
+- Express.js
+
+Database:
+- MongoDB Atlas
+
+Additional:
+- JWT
+- Socket.io
+- Leaflet
+
+Basic structure:
+
+rickshaw-app/
+|
+|-- client/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- pages/
+|   |   |-- services/
+|   |   |-- context/
+|   |   `-- App.jsx
+|
+|-- server/
+|   |-- models/
+|   |-- routes/
+|   |-- controllers/
+|   |-- middleware/
+|   |-- services/
+|   |-- socket/
+|   `-- server.js
+|
+`-- README.md
+
+
+PHASE 3 - USER REGISTRATION & LOGIN
+------------------------------------
+Implement:
+- Rider registration
+- Driver registration
+- Login
+- Logout
+- JWT authentication
+- Role-based authorization
+
+Roles:
+- RIDER
+- DRIVER
+- ADMIN
+
+MongoDB collection:
+
+users
+- name
+- email
+- phone
+- passwordHash
+- role
+- createdAt
+
+Finish this phase when:
+- Users can register.
+- Users can log in.
+- JWT is generated.
+- Protected pages work.
+- Users are redirected according to their role.
+
+
+PHASE 4 - RIDER TRIP REQUEST
+-----------------------------
+Create rider dashboard.
+
+Rider enters:
+- Pickup location
+- Destination
+- Date/time
+
+Display:
+- Map
+- Pickup marker
+- Destination marker
+- Route
+
+MongoDB collection:
+
+tripRequests
+- riderId
+- pickup
+- destination
+- requestedTime
+- estimatedFare
+- status
+- createdAt
+
+Initial status:
+PENDING
+
+
+PHASE 5 - FARE ESTIMATION ENGINE
+---------------------------------
+Start with a simple formula.
+
+Example:
+
+Estimated Fare =
+Base Fare + (Distance x Per KM Rate)
+
+Example:
+Base Fare = 30 BDT
+Per KM = 15 BDT
+Distance = 5 KM
+
+Estimated Fare = 30 + (5 x 15)
+                = 105 BDT
+
+Later you can consider:
+- Distance
+- Travel time
+- Time of day
+- Vehicle type
+- Demand
+
+API example:
+
+POST /api/fare/estimate
+
+Input:
+- Pickup
+- Destination
+
+Output:
+- Distance
+- Estimated travel time
+- Estimated fare
+
+
+PHASE 6 - DRIVER DASHBOARD
+---------------------------
+Driver dashboard should show:
+- Available trip requests
+- Pickup
+- Destination
+- Estimated fare
+- Distance
+- Route match percentage
+
+Driver can:
+- View request
+- Make offer
+- Reject request
+
+
+PHASE 7 - ROUTE-OVERLAP MATCHING
+---------------------------------
+This is the main special feature of the project.
+
+Example:
+
+Rider:
+Mirpur -> Farmgate
+
+Driver:
+Uttara -> Dhanmondi
+
+If both routes share a significant portion:
+
+Common route / Rider route x 100
+= Route overlap percentage
+
+Example:
+Rider route = 8 KM
+Common route = 5 KM
+
+Overlap = 5 / 8 x 100
+        = 62.5%
+
+Set a threshold such as:
+- 50% or higher = potential match
+
+System should:
+1. Find suitable drivers.
+2. Get/construct their routes.
+3. Compare rider and driver routes.
+4. Calculate overlap.
+5. Rank drivers.
+6. Show best matches first.
+
+Example:
+
+Driver A - 82% match
+Driver B - 67% match
+Driver C - 54% match
+
+
+PHASE 8 - FARE NEGOTIATION
+---------------------------
+This is the core feature.
+
+Example:
+
+Rider estimated fare: 120 BDT
+
+Driver:
+Offer = 150 BDT
+
+Rider:
+Counter offer = 135 BDT
+
+Driver:
+Counter offer = 140 BDT
+
+Rider:
+Accept = 140 BDT
+
+MongoDB collection:
+
+driverOffers
+- tripId
+- driverId
+- amount
+- message
+- status
+- createdAt
+
+Possible statuses:
+- PENDING
+- COUNTERED
+- ACCEPTED
+- REJECTED
+- EXPIRED
+
+Use Socket.io so offers appear in real time.
+
+
+PHASE 9 - TRIP CONFIRMATION & STATUS
+-------------------------------------
+After rider accepts an offer:
+
+Trip status flow:
+
+REQUESTED
+    |
+MATCHED
+    |
+NEGOTIATING
+    |
+ACCEPTED
+    |
+DRIVER_ARRIVING
+    |
+ONGOING
+    |
+COMPLETED
+
+Allow:
+- Driver to start trip.
+- Rider to see trip status.
+- Driver to end trip.
+- Rider to see completed trip.
+
+
+PHASE 10 - LIVE MAP
+--------------------
+Use:
+- React
+- Leaflet.js
+- OpenStreetMap
+
+Show:
+- Rider location
+- Driver location
+- Pickup
+- Destination
+- Route
+
+Start with static markers.
+
+Then implement live location:
+
+Driver GPS
+    |
+    v
+React Driver App
+    |
+    v
+Socket.io
+    |
+    v
+Node/Express Server
+    |
+    v
+Socket.io
+    |
+    v
+React Rider App
+    |
+    v
+Live Driver Marker
+
+
+PHASE 11 - POST-RIDE ACTUAL FARE
+---------------------------------
+After trip completion:
+
+Show:
+
+Agreed Fare: 140 BDT
+
+Actual Fare:
+[________]
+
+Rider submits:
+- Actual fare
+- Optional comment
+
+Store it in the trip document.
+
+Trip fields:
+- agreedFare
+- actualFare
+- startTime
+- endTime
+- status
+
+
+PHASE 12 - RATING & REVIEW
+---------------------------
+After completing a trip:
+
+Rider can:
+- Give 1-5 stars
+- Write review
+
+Optional:
+Driver can also rate rider.
+
+MongoDB collection:
+
+ratings
+- tripId
+- riderId
+- driverId
+- rating
+- review
+- createdAt
+
+
+PHASE 13 - ADMIN DASHBOARD
+---------------------------
+Admin dashboard should show:
+
+Statistics:
+- Total users
+- Total riders
+- Total drivers
+- Total trips
+- Completed trips
+- Cancelled trips
+- Average rating
+
+Admin functions:
+- View users
+- Block/unblock users
+- Verify drivers
+- Suspend drivers
+- View trips
+- View active trips
+- View cancelled trips
+- Manage complaints/reports
+
+
+PHASE 14 - NOTIFICATIONS
+-------------------------
+Add notifications for:
+
+Rider:
+- Driver found
+- New offer
+- Counter offer
+- Offer accepted
+- Driver arriving
+- Trip started
+- Trip completed
+
+Driver:
+- New trip request
+- Counter offer
+- Offer accepted
+- Trip cancelled
+
+
+PHASE 15 - TESTING
+------------------
+Test every feature.
+
+Authentication:
+- Valid login
+- Invalid login
+- Unauthorized access
+
+Trip:
+- Create trip
+- Cancel trip
+- Complete trip
+
+Fare:
+- Correct distance
+- Correct fare
+
+Matching:
+- Correct route
+- Correct overlap percentage
+
+Negotiation:
+- Offer
+- Counter offer
+- Accept
+- Reject
+
+Map:
+- Markers
+- Route
+- Location updates
+
+Rating:
+- Submit rating
+- Prevent duplicate rating
+
+
+PHASE 16 - DEPLOYMENT
+----------------------
+Frontend:
+- Deploy React to Vercel
+
+Backend:
+- Deploy Node/Express to Render or Railway
+
+Database:
+- MongoDB Atlas
+
+Before deployment:
+- Configure environment variables.
+- Enable CORS.
+- Secure JWT secret.
+- Protect API endpoints.
+- Test production API.
+
+
+RECOMMENDED MONGODB COLLECTIONS
+===============================
+
+1. users
+2. tripRequests
+3. driverOffers
+4. trips
+5. ratings
+6. locations
+7. notifications
+8. reports (optional)
+
+
+RECOMMENDED API STRUCTURE
+=========================
+
+AUTH
+----
+POST   /api/auth/register
+POST   /api/auth/login
+GET    /api/auth/me
+
+
+USERS
+-----
+GET    /api/users/profile
+PUT    /api/users/profile
+
+
+TRIPS
+-----
+POST   /api/trips
+GET    /api/trips
+GET    /api/trips/:id
+PUT    /api/trips/:id/status
+DELETE /api/trips/:id
+
+
+FARE
+----
+POST   /api/fare/estimate
+
+
+MATCHING
+--------
+GET    /api/matching/:tripId
+
+
+OFFERS
+------
+POST   /api/offers
+GET    /api/offers/:tripId
+POST   /api/offers/:offerId/counter
+PUT    /api/offers/:offerId/accept
+PUT    /api/offers/:offerId/reject
+
+
+TRACKING
+--------
+POST   /api/tracking/location
+GET    /api/tracking/:tripId
+
+
+RATINGS
+-------
+POST   /api/ratings
+GET    /api/ratings/driver/:driverId
+
+
+ADMIN
+-----
+GET    /api/admin/dashboard
+GET    /api/admin/users
+GET    /api/admin/trips
+PUT    /api/admin/users/:id/block
+PUT    /api/admin/drivers/:id/verify
+
+
+MVP - BUILD THIS FIRST
+======================
+
+Do NOT build all features at once.
+
+First complete:
+
+1. Registration/Login
+2. Rider creates trip
+3. Fare estimation
+4. Driver sees trip
+5. Driver makes offer
+6. Rider accepts offer
+7. Trip status
+8. Trip completion
+9. Rating
+
+Once this works, you have a functional MVP.
+
+
+VERSION 2
+=========
+
+Add:
+1. Route-overlap matching
+2. Map visualization
+3. Better driver matching
+4. Notifications
+
+
+VERSION 3
+=========
+
+Add:
+1. Live driver location
+2. Socket.io real-time updates
+3. Advanced fare calculation
+4. Admin dashboard
+5. Reports/complaints
+
+
+MOST IMPORTANT FEATURE
+======================
+
+Do not present this as simply an Uber/CNG booking application.
+
+Your main innovation should be:
+
+"Find drivers whose planned route overlaps with the rider's requested route and allow both parties to negotiate a mutually acceptable fare."
+
+Main workflow:
+
+Rider Request
+      |
+      v
+Fare Estimation
+      |
+      v
+Find Nearby Drivers
+      |
+      v
+Calculate Route Overlap
+      |
+      v
+Rank Matching Drivers
+      |
+      v
+Fare Negotiation
+      |
+      v
+Accept Offer
+      |
+      v
+Trip Tracking
+      |
+      v
+Complete Trip
+      |
+      v
+Actual Fare + Rating
+
+
+FINAL DEVELOPMENT ORDER
+=======================
+
+1. Requirements
+2. ER Diagram
+3. UI Design
+4. React Setup
+5. Node/Express Setup
+6. MongoDB Setup
+7. Authentication
+8. Rider Dashboard
+9. Trip Request
+10. Fare Estimation
+11. Driver Dashboard
+12. Driver Offers
+13. Negotiation
+14. Trip Status
+15. Route Matching
+16. Leaflet Map
+17. Live Tracking
+18. Actual Fare
+19. Rating/Review
+20. Admin Dashboard
+21. Notifications
+22. Testing
+23. Deployment
+24. Documentation
+25. Presentation/Demo
+
+
+SUGGESTED TEAM DIVISION
+=======================
+
+If you have 4 members:
+
+Member 1:
+- React frontend
+- Rider dashboard
+- Driver dashboard
+
+Member 2:
+- Node/Express backend
+- Authentication
+- Trip APIs
+- Fare APIs
+
+Member 3:
+- MongoDB
+- Route matching
+- Fare negotiation
+- Trip logic
+
+Member 4:
+- Maps
+- Socket.io
+- Live tracking
+- Admin dashboard
+
+
+KEY TECHNOLOGIES TO LEARN
+==========================
+
+Before starting:
+- JavaScript fundamentals
+- React basics
+- Node.js
+- Express.js
+- MongoDB/Mongoose
+- REST APIs
+- JWT authentication
+- Socket.io
+- Leaflet.js
+- Git/GitHub
+
+You do NOT need to master everything before starting.
+Learn each technology when you reach that phase.
+
