@@ -3,72 +3,69 @@ import { useEffect, useState } from 'react';
 
 const RoutePolyline = ({ pickup, destination }) => {
   const [routeCoordinates, setRouteCoordinates] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!pickup || !destination) return;
+
+    // Build straight-line fallback immediately so the line always shows
+    const straightLine = [
+      [Number(pickup.lat), Number(pickup.lng)],
+      [Number(destination.lat), Number(destination.lng)],
+    ];
+    setRouteCoordinates(straightLine);
+
+    // Then try to upgrade to a real OSRM road route
+    const controller = new AbortController();
+
     const fetchRoute = async () => {
-      if (!pickup || !destination) return;
-
-      setLoading(true);
-      setError(null);
-
       try {
-        // OSRM API - free routing service
-        const response = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`
+        const res = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`,
+          { signal: controller.signal }
         );
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch route');
-        }
+        if (!res.ok) return; // keep fallback
 
-        const data = await response.json();
+        const data = await res.json();
 
-        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-          const coordinates = data.routes[0].geometry.coordinates.map(coord => [
-            coord[1], // latitude
-            coord[0]  // longitude
-          ]);
-          setRouteCoordinates(coordinates);
-        } else {
-          setError('No route found');
+        if (data.code === 'Ok' && data.routes?.length > 0) {
+          const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          if (!controller.signal.aborted) {
+            setRouteCoordinates(coords);
+          }
         }
-      } catch (err) {
-        console.error('Error fetching route:', err);
-        setError('Failed to load route');
-      } finally {
-        setLoading(false);
+      } catch {
+        // OSRM unavailable — straight-line fallback already set, keep it
       }
     };
 
     fetchRoute();
-  }, [pickup, destination]);
 
-  if (loading) return null;
-  if (error || routeCoordinates.length === 0) return null;
+    return () => controller.abort();
+  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng]);
+
+  if (routeCoordinates.length === 0) return null;
 
   return (
     <>
-      {/* Background glowing outline for the route */}
+      {/* Soft glow halo behind the route */}
       <Polyline
         positions={routeCoordinates}
-        color="#60a5fa"
-        weight={8}
-        opacity={0.4}
+        color="#86efac"
+        weight={10}
+        opacity={0.35}
         lineCap="round"
         lineJoin="round"
       />
-      {/* Foreground main route line */}
+      {/* Main green dotted route line */}
       <Polyline
         positions={routeCoordinates}
-        color="#1d4ed8"
+        color="#16a34a"
         weight={4}
-        opacity={1}
-        dashArray="10, 10"
+        opacity={0.95}
+        dashArray="10, 8"
         lineCap="round"
         lineJoin="round"
-        className="route-line-anim"
       />
     </>
   );
