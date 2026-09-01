@@ -13,7 +13,7 @@ const RatingForm = ({ tripId, driverId, onRatingSubmitted }) => {
     e.preventDefault();
     
     if (rating === 0) {
-      setError('Please select a rating');
+      setError('Please select a rating before submitting.');
       return;
     }
 
@@ -36,7 +36,14 @@ const RatingForm = ({ tripId, driverId, onRatingSubmitted }) => {
         onRatingSubmitted();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit rating');
+      const msg = err.response?.data?.message || 'Failed to submit rating';
+      // If already rated — treat as success so the form doesn't block the rider
+      if (msg.toLowerCase().includes('already rated')) {
+        setSuccess(true);
+        if (onRatingSubmitted) onRatingSubmitted();
+      } else {
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }

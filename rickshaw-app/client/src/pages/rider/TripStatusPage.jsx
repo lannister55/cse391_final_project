@@ -29,18 +29,6 @@ const TripStatusPage = () => {
         if (data.trip.tripRequestId) {
           setTripRequest(data.trip.tripRequestId);
         }
-
-        // Check if user has already rated this trip
-        try {
-          const ratingResponse = await api.get(`/ratings/trip/${id}`);
-          setHasRated(true);
-        } catch (ratingErr) {
-          // Only 404 means "not yet rated"; anything else is a real error
-          if (ratingErr.response?.status === 404) {
-            setHasRated(false);
-          }
-          // For other errors we silently default to false so the form still shows
-        }
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load trip status.');
       } finally {
