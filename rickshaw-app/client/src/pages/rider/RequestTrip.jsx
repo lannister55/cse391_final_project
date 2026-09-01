@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -29,6 +29,10 @@ const RequestTrip = () => {
   const [confirming, setConfirming] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState('');
+
+  // Debounce timer refs — prevent hammering Nominatim on every keystroke
+  const pickupDebounceRef = useRef(null);
+  const destDebounceRef   = useRef(null);
 
   // ── Option 2: Reverse Geocoding for Map Clicks ──────────────────────────────
   const reverseGeocode = async (lat, lng) => {
@@ -170,6 +174,17 @@ const RequestTrip = () => {
     }
   };
 
+  // Debounced wrappers — wait 400ms after the user stops typing before calling Nominatim
+  const debouncedSearchPickup = (query) => {
+    clearTimeout(pickupDebounceRef.current);
+    pickupDebounceRef.current = setTimeout(() => searchLocations(query, 'pickup'), 400);
+  };
+
+  const debouncedSearchDest = (query) => {
+    clearTimeout(destDebounceRef.current);
+    destDebounceRef.current = setTimeout(() => searchLocations(query, 'destination'), 400);
+  };
+
   const handleSelectSuggestion = (item, type) => {
     const point = { name: item.name, lat: item.lat, lng: item.lng };
     if (type === 'pickup') {
@@ -285,7 +300,7 @@ const RequestTrip = () => {
                       value={pickupInput}
                       onChange={(e) => {
                         setPickupInput(e.target.value);
-                        searchLocations(e.target.value, 'pickup');
+                        debouncedSearchPickup(e.target.value);
                       }}
                       placeholder="e.g. Mirpur 10, Dhanmondi 32, Airport..."
                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
@@ -323,7 +338,7 @@ const RequestTrip = () => {
                       value={destInput}
                       onChange={(e) => {
                         setDestInput(e.target.value);
-                        searchLocations(e.target.value, 'destination');
+                        debouncedSearchDest(e.target.value);
                       }}
                       placeholder="e.g. Gulshan 2, Uttara Sector 3, Farmgate..."
                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all"

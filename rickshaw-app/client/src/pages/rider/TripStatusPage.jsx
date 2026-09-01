@@ -117,7 +117,7 @@ const TripStatusPage = () => {
     );
   }
 
-  const canCancel = trip.status === 'ACCEPTED' || trip.status === 'DRIVER_ARRIVING';
+  const canCancel = ['PENDING', 'NEGOTIATING', 'ACCEPTED', 'DRIVER_ARRIVING'].includes(trip.status);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row relative">

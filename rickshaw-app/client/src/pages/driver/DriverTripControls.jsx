@@ -392,35 +392,42 @@ const DriverTripControls = () => {
                 💻 Desktop GPS Simulator
               </h3>
               <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
-                Simulate driver movement live from Pickup (P) to Destination (D).
+                Simulate driver movement live from Pickup (P) → Driver Arriving → Destination (D).
               </p>
               <button
+                disabled={updating || isSimulating}
                 onClick={async () => {
-                  if (!isSimulating) {
-                    // Transition status to ONGOING if currently ACCEPTED or DRIVER_ARRIVING
+                  if (isSimulating) return; // already running — button should be disabled, safety guard
+                  setUpdating(true);
+                  try {
+                    // Step 1: ACCEPTED → DRIVER_ARRIVING (let rider see this state)
                     if (trip.status === 'ACCEPTED') {
-                      try {
-                        await api.put(`/trips/${id}/status`, { status: 'DRIVER_ARRIVING' });
-                        const { data } = await api.put(`/trips/${id}/status`, { status: 'ONGOING' });
-                        setTrip(data.trip);
-                      } catch (e) { console.error(e); }
-                    } else if (trip.status === 'DRIVER_ARRIVING') {
-                      try {
-                        const { data } = await api.put(`/trips/${id}/status`, { status: 'ONGOING' });
-                        setTrip(data.trip);
-                      } catch (e) { console.error(e); }
+                      const { data: d1 } = await api.put(`/trips/${id}/status`, { status: 'DRIVER_ARRIVING' });
+                      setTrip(d1.trip);
+                      // Wait 1.5s so rider's status bar shows DRIVER_ARRIVING
+                      await new Promise((r) => setTimeout(r, 1500));
                     }
+                    // Step 2: DRIVER_ARRIVING → ONGOING
+                    if (trip.status === 'ACCEPTED' || trip.status === 'DRIVER_ARRIVING') {
+                      const { data: d2 } = await api.put(`/trips/${id}/status`, { status: 'ONGOING' });
+                      setTrip(d2.trip);
+                    }
+                  } catch (e) {
+                    console.error('Sim status transition error:', e);
+                    setUpdating(false);
+                    return;
                   }
+                  setUpdating(false);
                   setSimulationIndex(0);
-                  setIsSimulating(!isSimulating);
+                  setIsSimulating(true);
                 }}
                 className={`w-full font-bold py-3 px-3 text-xs rounded-xl shadow transition-all flex items-center justify-center gap-2 ${
-                  isSimulating 
-                    ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/10' 
+                  isSimulating || updating
+                    ? 'bg-slate-400 cursor-not-allowed text-white opacity-70'
                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20'
                 }`}
               >
-                {isSimulating ? '⏹️ Stop Simulation' : '🚀 Start Simulated Movement'}
+                {updating ? '⏳ Preparing...' : isSimulating ? '🔄 Simulating...' : '🚀 Start Simulated Movement'}
               </button>
               {isSimulating && (
                 <div className="flex items-center justify-between text-[11px] text-blue-800 font-bold">

@@ -179,12 +179,16 @@ const NegotiatePage = () => {
             : { ...o, status: 'REJECTED' }
         )
       );
+      // Navigate directly to trip status — don't wait solely on socket event
+      if (data.trip?._id) {
+        setTimeout(() => navigate(`/rider/trip-status/${data.trip._id}`), 1500);
+      }
     } catch (err) {
       setError(offerId, err.response?.data?.message || 'Accept failed.');
     } finally {
       setLoading(offerId, false);
     }
-  }, []);
+  }, [navigate]);
 
   /** Rider rejects a single offer */
   const handleReject = useCallback(async (offerId) => {

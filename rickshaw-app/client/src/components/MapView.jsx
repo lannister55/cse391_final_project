@@ -110,7 +110,15 @@ const MapView = ({ pickup, destination, driverLocation, status, center, zoom = 1
           attribution="&copy; Google Maps"
         />
         
-        <MapUpdater center={defaultCenter} zoom={zoom} />
+        {/* Auto-follow driver when active; otherwise centre on pickup */}
+        <MapUpdater
+          center={
+            driverLocation && !isCompleted
+              ? [driverLocation.lat, driverLocation.lng]
+              : defaultCenter
+          }
+          zoom={zoom}
+        />
         <MapClickHandler onMapClick={onMapClick} />
 
         {/* Route line between pickup and destination */}
@@ -146,15 +154,7 @@ const MapView = ({ pickup, destination, driverLocation, status, center, zoom = 1
           </Marker>
         )}
 
-        {isCompleted && destination && (
-          <Marker position={[destination.lat, destination.lng]} icon={driverIcon}>
-            <Popup>
-              <div className="text-sm font-bold text-emerald-800">
-                🏁 TRIP FINISHED - TAXI ARRIVED
-              </div>
-            </Popup>
-          </Marker>
-        )}
+        {/* Removed: duplicate taxi marker on COMPLETED (flag icon already shown above) */}
       </MapContainer>
     </div>
   );

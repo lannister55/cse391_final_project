@@ -216,10 +216,10 @@ export const acceptOffer = async (req, res) => {
 
     const populated = await toClientOffer(offer._id);
     emitToTrip(tripId, 'offer-accepted', {
-      offerId: offer._id,
-      tripId,
-      offer: populated,
-      tripId: tripDoc._id, // Include the new trip ID
+      offerId:       offer._id,
+      tripRequestId: tripId,      // Original TripRequest document ID
+      offer:         populated,
+      tripId:        tripDoc._id, // New Trip document ID (used for redirect)
     });
 
     return res.status(200).json({ offer: populated, trip: tripDoc, message: 'Offer accepted' });

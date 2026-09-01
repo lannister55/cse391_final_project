@@ -75,8 +75,12 @@ const TripDetail = () => {
   const [counterError,    setCounterError]    = useState('');
 
   // Existing offers list
-  const [offers,       setOffers]       = useState([]);
+  const [offers,        setOffers]       = useState([]);
   const [offersLoading, setOffersLoading] = useState(true);
+
+  // Stores the new Trip document ID once the rider accepts our offer
+  // (fallback redirect if the socket's auto-redirect misses)
+  const [acceptedTripId, setAcceptedTripId] = useState(null);
 
   // ── Fetch trip details ────────────────────────────────────────────────────
 
@@ -140,6 +144,10 @@ const TripDetail = () => {
             : o
         )
       );
+
+      // Store Trip ID for fallback button
+      if (newTripId) setAcceptedTripId(newTripId);
+
       // Redirect to trip controls if we have the trip ID
       if (newTripId) {
         setTimeout(() => {
@@ -483,6 +491,21 @@ const TripDetail = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+        {/* ── Accepted offer fallback banner ──────────────────────────────── */}
+        {acceptedTripId && (
+          <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-6 text-center space-y-3 shadow-md">
+            <p className="text-xl font-black text-emerald-700">🎉 Deal Accepted!</p>
+            <p className="text-sm text-emerald-600 font-medium">
+              The rider accepted your offer. Redirecting to Trip Controls...
+            </p>
+            <button
+              onClick={() => navigate(`/driver/trip-controls/${acceptedTripId}`)}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-all"
+            >
+              🚗 Go to Trip Controls →
+            </button>
           </div>
         )}
 
